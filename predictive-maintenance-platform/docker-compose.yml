@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # 1. FRONTEND
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # 2. BACKEND API
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  # 3. WORKER (AGENTS)
+  worker:
+    build: ./backend
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - backend
+
+  # 4. REDIS
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+# We don't host Supabase locally in this simplified version because it's huge.
+# We connect to the cloud instance or a minimal postgres if requested, 
+# but user spec implies Supabase cloud managed or pre-existing

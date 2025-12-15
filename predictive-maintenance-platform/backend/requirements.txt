@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+supabase
+python-dotenv
+pydantic
+celery
+redis
+scikit-learn
+pandas
+numpy
+websockets
+python-multipart
+requests
+jinja2
+itsdangerous
+watchfiles
+email-validator
