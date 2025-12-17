@@ -1,28 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { FileText } from 'lucide-react';
+import { FileText, AlertTriangle } from 'lucide-react';
 import Modal from '../components/Modal';
 import BlockchainVisualizer from '../components/BlockchainVisualizer';
 import SentimentFeed from '../components/SentimentFeed';
-
-const failureData = [
-  { name: 'Jan', failures: 40, recalls: 24 },
-  { name: 'Feb', failures: 30, recalls: 13 },
-  { name: 'Mar', failures: 20, recalls: 98 },
-  { name: 'Apr', failures: 27, recalls: 39 },
-  { name: 'May', failures: 18, recalls: 48 },
-  { name: 'Jun', failures: 23, recalls: 38 },
-];
-
-const componentData = [
-    { name: 'Brake Pads', quality: 92 },
-    { name: 'Engine ECU', quality: 98 },
-    { name: 'Battery', quality: 85 },
-    { name: 'Transmission', quality: 95 },
-];
+import { agentsApi } from '../services/api';
 
 export default function ManufacturerDashboard() {
     const [selectedSpec, setSelectedSpec] = useState(null);
+    const [qualityData, setQualityData] = useState(null);
+
+    useEffect(() => {
+        const fetchQuality = async () => {
+            const data = await agentsApi.getDashboardData();
+            if (data && data.manufacturing_quality) {
+                setQualityData(data.manufacturing_quality);
+            }
+        };
+        fetchQuality();
+    }, []);
+
+    // Mock trend data for visualization if not enough real history
+    const failureData = [
+        { name: 'Jan', failures: 40, recalls: 24 },
+        { name: 'Feb', failures: 30, recalls: 13 },
+        { name: 'Mar', failures: 20, recalls: 98 },
+        { name: 'Apr', failures: 27, recalls: 39 },
+        { name: 'May', failures: 18, recalls: 48 },
+        { name: 'Jun', failures: 23, recalls: 38 },
+    ];
+
+    // Transform batch data for chart if available
+    const batchChartData = qualityData?.batch_summary ? Object.entries(qualityData.batch_summary).map(([id, stats]) => ({
+        name: id,
+        quality: (1 - stats.avg_failure_risk) * 100
+    })) : [
+        { name: 'Batch A', quality: 92 },
+        { name: 'Batch B', quality: 85 }
+    ];
 
     return (
         <div className="space-y-6 pb-20">
@@ -43,7 +58,7 @@ export default function ManufacturerDashboard() {
                                 <YAxis stroke="#666" />
                                 <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #333' }} />
                                 <Legend />
-                                <Line type="monotone" dataKey="failures" stroke="#ef4444" strokeWidth={2} dot={{r: 4}} activeDot={{r: 8}} />
+                                <Line type="monotone" dataKey="failures" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} />
                                 <Line type="monotone" dataKey="recalls" stroke="#f59e0b" strokeWidth={2} />
                             </LineChart>
                         </ResponsiveContainer>
@@ -51,18 +66,18 @@ export default function ManufacturerDashboard() {
                 </div>
 
                 <div className="glass-panel p-6">
-                    <h3 className="text-xl font-bold mb-4">Component Quality Index</h3>
+                    <h3 className="text-xl font-bold mb-4">Batch Quality Index</h3>
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={componentData} layout="vertical">
+                            <BarChart data={batchChartData} layout="vertical">
                                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                                 <XAxis type="number" domain={[0, 100]} stroke="#666" />
-                                <YAxis dataKey="name" type="category" width={100} stroke="#666" tick={{fill: '#9ca3af', fontSize: 12}} />
+                                <YAxis dataKey="name" type="category" width={100} stroke="#666" tick={{ fill: '#9ca3af', fontSize: 12 }} />
                                 <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #333' }} />
                                 <Bar dataKey="quality" fill="#3b82f6" radius={[0, 4, 4, 0]}>
                                     {
-                                        componentData.map((entry, index) => (
-                                        <cell key={`cell-${index}`} fill={entry.quality > 90 ? '#10b981' : entry.quality > 80 ? '#f59e0b' : '#ef4444'} />
+                                        batchChartData.map((entry, index) => (
+                                            <cell key={`cell-${index}`} fill={entry.quality > 90 ? '#10b981' : entry.quality > 80 ? '#f59e0b' : '#ef4444'} />
                                         ))
                                     }
                                 </Bar>
@@ -71,8 +86,39 @@ export default function ManufacturerDashboard() {
                     </div>
                 </div>
             </div>
-            
-            {/* ROW 2: New Features */}
+
+            {/* ROW 2: Quality Insights (New Agent Data) */}
+            <div className="glass-panel p-6">
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <AlertTriangle className="text-yellow-500" />
+                    Agent Quality Analysis
+                </h3>
+                {qualityData ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-black/30 p-4 rounded border border-white/10">
+                            <h4 className="text-xs text-gray-400 uppercase">Trend</h4>
+                            <p className={`text-xl font-bold ${qualityData.quality_trend === 'Declining' ? 'text-red-400' : 'text-green-400'}`}>
+                                {qualityData.quality_trend}
+                            </p>
+                        </div>
+                        <div className="bg-black/30 p-4 rounded border border-white/10">
+                            <h4 className="text-xs text-gray-400 uppercase">Batches Monitored</h4>
+                            <p className="text-xl font-bold text-white">{qualityData.total_batches}</p>
+                        </div>
+                        {/* Display first batch insight if any */}
+                        {Object.entries(qualityData.batch_summary || {}).map(([id, stats], i) => (
+                            <div key={id} className={`bg-black/30 p-4 rounded border border-white/10 ${i > 0 ? 'hidden md:block' : ''}`}>
+                                <h4 className="text-xs text-gray-400 uppercase">Batch {id} Issue</h4>
+                                <p className="text-sm text-gray-300 truncate">{stats.common_component}</p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-gray-500 italic">Waiting for ManufacturingAgent data...</div>
+                )}
+            </div>
+
+            {/* ROW 3: New Features */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
                     <BlockchainVisualizer />
@@ -82,7 +128,7 @@ export default function ManufacturerDashboard() {
                 </div>
             </div>
 
-            {/* ROW 3: RCA Table */}
+            {/* ROW 4: RCA Table */}
             <div className="glass-panel p-6">
                 <h3 className="text-xl font-bold mb-4">Root Cause Analysis (RCA) Feeds</h3>
                 <div className="overflow-x-auto">
@@ -103,7 +149,7 @@ export default function ManufacturerDashboard() {
                                 <td className="p-3">Thermal expansion exceeding tolerances</td>
                                 <td className="p-3"><span className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/50 rounded text-xs font-bold">CRITICAL</span></td>
                                 <td className="p-3">
-                                    <button 
+                                    <button
                                         onClick={() => setSelectedSpec({ id: 'RCA-2024-001', title: 'Brake Caliper X5 Specification' })}
                                         className="text-primary hover:text-neon-blue hover:underline flex items-center gap-1 transition-colors"
                                     >
@@ -117,7 +163,7 @@ export default function ManufacturerDashboard() {
                                 <td className="p-3">Voltage sag under load &gt; 40C</td>
                                 <td className="p-3"><span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 rounded text-xs font-bold">HIGH</span></td>
                                 <td className="p-3">
-                                    <button 
+                                    <button
                                         onClick={() => setSelectedSpec({ id: 'RCA-2024-002', title: 'Li-Ion Cell Batch 9 Specification' })}
                                         className="text-primary hover:text-neon-blue hover:underline flex items-center gap-1 transition-colors"
                                     >

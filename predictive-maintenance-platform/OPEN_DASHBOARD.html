@@ -1,17 +1,382 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Launch App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadIQ Agentic Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        .btn { padding: 20px 40px; background: #3b82f6; color: white; text-decoration: none; border-radius: 10px; font-size: 24px; font-weight: bold; }
-        .btn:hover { background: #2563eb; }
-        p { margin-top: 20px; color: #94a3b8; }
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+        }
+
+        .card-hover:hover {
+            border-color: rgba(6, 182, 212, 0.5);
+            transform: translateY(-2px);
+            transition: all 0.2s;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
     </style>
 </head>
-<body>
-    <h1>Predictive Maintenance System</h1>
-    <a href="http://localhost:3000" class="btn" target="_blank">OPEN DASHBOARD</a>
-    <p>Note: You must have the black terminal window running for this to work.</p>
+
+<body class="min-h-screen pb-20">
+    <nav class="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="cpu" class="text-cyan-400"></i>
+                    <span class="font-bold text-xl tracking-wider text-white">RoadIQ <span
+                            class="text-cyan-400">AI</span></span>
+                </div>
+                <div class="flex gap-4 text-sm font-medium">
+                    <button onclick="switchTab('owner')" id="tab-owner"
+                        class="text-white bg-gray-800 px-3 py-1 rounded hover:bg-gray-700 transition">Owner
+                        Dashboard</button>
+                    <button onclick="switchTab('monitor')" id="tab-monitor"
+                        class="text-gray-400 hover:text-white px-3 py-1 rounded transition">Agent Monitor</button>
+                    <button onclick="switchTab('manufacturer')" id="tab-manufacturer"
+                        class="text-gray-400 hover:text-white px-3 py-1 rounded transition">Manufacturing</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+        <!-- Owner Dashboard -->
+        <div id="view-owner" class="space-y-6">
+            <header class="flex justify-between items-end">
+                <div>
+                    <h2
+                        class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                        Fleet Status</h2>
+                    <p class="text-gray-400 text-sm mt-1">Real-time Agent Diagnostics</p>
+                </div>
+                <button onclick="refreshData()"
+                    class="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-medium transition shadow-lg shadow-cyan-500/20">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Sync
+                </button>
+            </header>
+
+            <div id="vehicle-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Vehicles will be injected here -->
+                <div class="col-span-full text-center py-10 text-gray-500 animate-pulse">Connecting to Neural Bus...
+                </div>
+            </div>
+
+            <div id="diagnostic-panel" class="hidden glass rounded-xl p-6 border-l-4 border-cyan-500">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="activity" class="text-cyan-400"></i> AI Diagnostic Report
+                        </h3>
+                        <p class="text-sm text-gray-400 font-mono mt-1" id="diag-model-id">Scanning...</p>
+                    </div>
+                    <span id="diag-badge"
+                        class="px-2 py-1 rounded text-xs font-bold uppercase bg-gray-700 text-white">READY</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <h4 class="text-xs text-gray-400 uppercase tracking-wider mb-2">Risk Level</h4>
+                        <div id="diag-risk" class="text-2xl font-bold text-white">--</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <h4 class="text-xs text-gray-400 uppercase tracking-wider mb-2">Primary Issue</h4>
+                        <div id="diag-issue" class="text-lg font-bold text-red-400">--</div>
+                        <p id="diag-rec" class="text-sm text-gray-400 mt-1">--</p>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <h4 class="text-xs text-gray-400 uppercase tracking-wider mb-2">Recommendation</h4>
+                        <div id="diag-action" class="text-lg font-medium text-green-400">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Monitor -->
+        <div id="view-monitor" class="hidden h-[calc(100vh-200px)] flex flex-col gap-6">
+            <div class="glass flex-1 rounded-xl p-4 font-mono text-sm overflow-hidden flex flex-col relative bg-black">
+                <div
+                    class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] pointer-events-none bg-[length:100%_4px,3px_100%] z-10">
+                </div>
+                <div class="flex items-center gap-2 text-gray-500 border-b border-gray-800 pb-2 mb-2">
+                    <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+                    <span class="ml-2">root@ueba-system:~# tail -f /var/log/security.log</span>
+                </div>
+                <div id="terminal-logs" class="flex-1 overflow-y-auto space-y-1 p-2 custom-scrollbar">
+                    <div class="text-gray-500">System initialization...</div>
+                    <div class="text-green-500">UEBA Agent active. Monitoring protocol v2.0 engaged.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manufacturing -->
+        <div id="view-manufacturer" class="hidden space-y-6">
+            <header>
+                <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-white">
+                    Manufacturing Intelligence</h2>
+                <p class="text-gray-400 text-sm mt-1">Batch Quality & R&D Feedback</p>
+            </header>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="manufacturing-stats">
+                <div class="glass p-6 rounded-xl">
+                    <h3 class="text-gray-400 text-sm uppercase">Total Batches</h3>
+                    <p id="fact-total" class="text-3xl font-bold text-white mt-2">--</p>
+                </div>
+                <div class="glass p-6 rounded-xl">
+                    <h3 class="text-gray-400 text-sm uppercase">Quality Trend</h3>
+                    <p id="fact-trend" class="text-3xl font-bold mt-2">--</p>
+                </div>
+            </div>
+            <div class="glass p-6 rounded-xl">
+                <h3 class="text-xl font-bold mb-4">Batch Analysis</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-gray-400">
+                        <thead class="bg-gray-800/50 uppercase">
+                            <tr>
+                                <th class="p-3">Batch ID</th>
+                                <th class="p-3">Avg Failure Risk</th>
+                                <th class="p-3">Common Defect</th>
+                                <th class="p-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch-table-body" class="divide-y divide-gray-800">
+                            <!-- Rows injected -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Floating Voice Button -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button onclick="toggleVoice()"
+            class="bg-cyan-600 hover:bg-cyan-500 text-white p-4 rounded-full shadow-lg shadow-cyan-500/20 transition-transform active:scale-95 border border-cyan-400">
+            <i data-lucide="mic" class="w-6 h-6"></i>
+        </button>
+    </div>
+
+    <!-- Voice Panel -->
+    <div id="voice-panel"
+        class="hidden fixed bottom-24 right-6 bg-gray-900 border border-gray-700 rounded-xl p-4 w-72 shadow-2xl z-50">
+        <h3 class="text-cyan-400 font-bold mb-3 flex items-center gap-2"><i data-lucide="volume-2" class="w-4 h-4"></i>
+            Voice Commands</h3>
+        <div class="space-y-2">
+            <button onclick="askVoice('vehicle_health')"
+                class="w-full text-left p-2 rounded bg-gray-800 hover:bg-gray-700 text-sm text-gray-300">"Check Vehicle
+                Health"</button>
+            <button onclick="askVoice('repair_cost')"
+                class="w-full text-left p-2 rounded bg-gray-800 hover:bg-gray-700 text-sm text-gray-300">"Estimate
+                Repair Cost"</button>
+            <button onclick="askVoice('schedule_service')"
+                class="w-full text-left p-2 rounded bg-gray-800 hover:bg-gray-700 text-sm text-gray-300">"Schedule
+                Service"</button>
+        </div>
+        <div id="voice-status" class="mt-3 text-center text-xs text-cyan-600">Idle</div>
+    </div>
+
+    <script>
+        // Init Icons
+        lucide.createIcons();
+
+        const API_URL = 'http://localhost:8000';
+
+        // State
+        let currentTab = 'owner';
+
+        // Navigation
+        function switchTab(tab) {
+            document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+
+            // Update buttons
+            document.querySelectorAll('[id^="tab-"]').forEach(el => {
+                el.classList.remove('text-white', 'bg-gray-800');
+                el.classList.add('text-gray-400');
+            });
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            activeBtn.classList.remove('text-gray-400');
+            activeBtn.classList.add('text-white', 'bg-gray-800');
+
+            if (tab === 'manufacturer') loadManufacturingData();
+            if (tab === 'monitor') loadMonitorData();
+        }
+
+        // Mock Vehicles (since API might fail if DB empty) + API Hydration
+        const mockVehicles = [
+            { id: 'V001', make: 'Tesla', model: 'Model 3', vin: 'V001', health_score: 22 },
+            { id: 'V002', make: 'Ford', model: 'F-150', vin: 'V002', health_score: 98 },
+            { id: 'V003', make: 'Toyota', model: 'Camry', vin: 'V003', health_score: 15 },
+        ];
+
+        async function refreshData() {
+            renderVehicles(mockVehicles); // Immediate render
+            // In real app, fetch from /api/vehicles if available
+        }
+
+        function renderVehicles(list) {
+            const grid = document.getElementById('vehicle-grid');
+            grid.innerHTML = list.map(v => `
+                <div onclick="runDiagnosis('${v.vin}')" class="glass p-6 rounded-xl cursor-pointer card-hover group relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">${v.make} ${v.model}</h3>
+                            <div class="text-xs text-gray-500 font-mono">${v.vin}</div>
+                        </div>
+                        <i data-lucide="activity" class="${getHealthColor(v.health_score)}"></i>
+                    </div>
+                    <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                        <div class="h-full ${getHealthBarColor(v.health_score)}" style="width: ${v.health_score}%"></div>
+                    </div>
+                    <div class="flex justify-between text-sm mt-2">
+                         <span class="text-gray-400">Health</span>
+                         <span class="font-bold text-white">${v.health_score}%</span>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function getHealthColor(score) {
+            return score > 80 ? 'text-green-400' : score > 50 ? 'text-yellow-400' : 'text-red-400';
+        }
+        function getHealthBarColor(score) {
+            return score > 80 ? 'bg-green-400' : score > 50 ? 'bg-yellow-400' : 'bg-red-400';
+        }
+
+        async function runDiagnosis(vin) {
+            const panel = document.getElementById('diagnostic-panel');
+            panel.classList.remove('hidden');
+            document.getElementById('diag-model-id').innerText = `Analyzing VIN: ${vin}...`;
+
+            try {
+                const res = await fetch(`${API_URL}/api/agents/vehicle-health/${vin}`);
+                const data = await res.json();
+
+                if (data && data.diagnosis) {
+                    document.getElementById('diag-model-id').innerText = `Diagnosis Complete: ${vin}`;
+                    document.getElementById('diag-risk').innerText = data.risk_assessment.level;
+                    document.getElementById('diag-risk').className = `text-2xl font-bold ${data.risk_assessment.level === 'HIGH' ? 'text-red-500' : 'text-yellow-500'}`;
+
+                    document.getElementById('diag-issue').innerText = data.diagnosis.component;
+                    document.getElementById('diag-rec').innerText = data.diagnosis.recommendation;
+
+                    document.getElementById('diag-action').innerText = data.customer_engagement.agreed ? "Service Scheduled" : "Pending Action";
+                } else {
+                    document.getElementById('diag-model-id').innerText = `System Nominal: ${vin}`;
+                    document.getElementById('diag-risk').innerText = "LOW";
+                    document.getElementById('diag-risk').className = "text-2xl font-bold text-green-500";
+                    document.getElementById('diag-issue').innerText = "None";
+                    document.getElementById('diag-rec').innerText = "All systems operational";
+                    document.getElementById('diag-action').innerText = "No Action Required";
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Failed to connect to Agent API. Ensure backend is running!");
+            }
+        }
+
+        // Manufacturing Data
+        async function loadManufacturingData() {
+            try {
+                const res = await fetch(`${API_URL}/api/dashboard/`);
+                const data = await res.json();
+                const mfg = data.manufacturing_quality;
+
+                if (mfg) {
+                    document.getElementById('fact-total').innerText = mfg.total_batches;
+                    document.getElementById('fact-trend').innerText = mfg.quality_trend;
+                    document.getElementById('fact-trend').className = `text-3xl font-bold mt-2 ${mfg.quality_trend === 'Declining' ? 'text-red-400' : 'text-green-400'}`;
+
+                    const rows = Object.entries(mfg.batch_summary || {}).map(([id, stats]) => `
+                        <tr class="hover:bg-gray-800/30 transition">
+                            <td class="p-3 font-mono text-cyan-400">${id}</td>
+                            <td class="p-3 text-white">${stats.avg_failure_risk.toFixed(2)}</td>
+                            <td class="p-3 text-gray-400">${stats.common_component}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs bg-gray-700 text-white">Processed</span></td>
+                        </tr>
+                    `).join('');
+                    document.getElementById('batch-table-body').innerHTML = rows;
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // UEBA Monitor
+        async function loadMonitorData() {
+            try {
+                const res = await fetch(`${API_URL}/api/agents/ueba-alerts`);
+                const data = await res.json();
+                if (data.active_alerts) {
+                    const terminal = document.getElementById('terminal-logs');
+                    const logs = data.active_alerts.map(a => `
+                        <div class="flex gap-2 font-mono text-xs opacity-90 hover:opacity-100 bg-gray-900/50 p-1">
+                            <span class="text-gray-500">[${a.timestamp}]</span>
+                            <span class="${a.status === 'Blocked' ? 'text-red-500' : 'text-yellow-500'}">${a.status.toUpperCase()}</span>
+                            <span class="text-white">${a.description}</span>
+                        </div>
+                   `).join('');
+                    terminal.innerHTML = logs;
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Voice
+        function toggleVoice() {
+            document.getElementById('voice-panel').classList.toggle('hidden');
+        }
+
+        async function askVoice(type) {
+            document.getElementById('voice-status').innerText = "Thinking...";
+            try {
+                const res = await fetch(`${API_URL}/api/agents/voice/speak`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question_type: type })
+                });
+                const data = await res.json();
+                document.getElementById('voice-status').innerText = data.status === 'speaking' ? "Speaking..." : "Done";
+                setTimeout(() => document.getElementById('voice-status').innerText = "Idle", 3000);
+            } catch (e) {
+                document.getElementById('voice-status').innerText = "Error";
+            }
+        }
+
+        // Init
+        refreshData();
+    </script>
 </body>
+
 </html>

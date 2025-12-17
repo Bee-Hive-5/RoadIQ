@@ -7,12 +7,13 @@ import VoiceAssistant from './VoiceAssistant';
 export default function Layout() {
     const location = useLocation();
 
-    
+
     const navItems = [
         { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
         { name: 'Service Admin', path: '/service', icon: Settings },
         { name: 'Manufacturer', path: '/manufacturer', icon: Car },
         { name: 'Agent Monitor', path: '/agents', icon: BrainCircuit },
+        { name: 'Playground', path: '/agents-interactive', icon: Play },
         { name: 'Geo Map', path: '/map', icon: Map },
     ];
 
@@ -20,20 +21,27 @@ export default function Layout() {
         <div className="flex h-screen overflow-hidden">
             {/* Sidebar */}
             <aside className="w-64 bg-surface border-r border-white/5 hidden md:flex flex-col">
-                <div className="p-6">
-                    <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
-                        P.M.S. AI
-                    </h1>
-                    <p className="text-xs text-gray-500 mt-1">Predictive Maintenance System</p>
+                <div className="p-6 pb-2">
+                    <div className="flex items-center gap-3 mb-2">
+                        <img src="/src/assets/roadiq_logo.png" alt="RoadIQ" className="w-12 h-12" />
+                        <div>
+                            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                                RoadIQ
+                            </h1>
+                        </div>
+                    </div>
+                    <p className="text-xs text-cyan-300 font-medium tracking-wide border-t border-white/10 pt-2">
+                        Smarter Vehicles. Safer Roads
+                    </p>
                 </div>
-                
+
                 <nav className="flex-1 px-4 space-y-2 mt-6">
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = location.pathname === item.path;
                         return (
-                            <Link 
-                                key={item.path} 
+                            <Link
+                                key={item.path}
                                 to={item.path}
                                 className={`flex items-center px-4 py-3 rounded-lg transition-all ${isActive ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                             >
@@ -52,7 +60,7 @@ export default function Layout() {
                             <p className="text-xs text-green-400">Online</p>
                         </div>
                     </div>
-                    
+
                     {/* HACKATHON DEMO CONTROL */}
                     <div className="bg-surface/50 p-2 rounded border border-white/5">
                         <p className="text-[10px] uppercase text-gray-500 font-bold mb-2">Demo Role Switcher</p>

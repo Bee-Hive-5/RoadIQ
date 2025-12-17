@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Activity, AlertTriangle, CheckCircle, Thermometer, Plus, FileText } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Thermometer, Plus, FileText, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { agentsApi } from '../services/api';
 
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
@@ -13,9 +14,13 @@ export default function OwnerDashboard() {
     const [vehicles, setVehicles] = useState([]);
     const [telemetry, setTelemetry] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [toast, setToast] = useState(null); // { message, type }
+    const [toast, setToast] = useState(null);
+    const [selectedVehicle, setSelectedVehicle] = useState(null);
+    const [analysisResult, setAnalysisResult] = useState(null);
 
     useEffect(() => {
+        // Fetch vehicles from Supabase for list (keeping existing logic for list)
+        // In full integration, we might fetch from API if we had a list endpoint
         const fetchVehicles = async () => {
             const { data } = await supabase.from('vehicles').select('*');
             if (data) setVehicles(data);
@@ -37,17 +42,31 @@ export default function OwnerDashboard() {
         return 'text-danger';
     };
 
+    const runAgentAnalysis = async (vehicleId) => {
+        setToast({ message: 'Agents Analyzing Vehicle Telemetry...', type: 'info' });
+        const result = await agentsApi.getVehicleHealth(vehicleId);
+        if (result) {
+            setAnalysisResult(result);
+            if (result.diagnosis) {
+                setToast({ message: `Alert: ${result.diagnosis.component}`, type: 'error' });
+            } else {
+                setToast({ message: 'Analysis Complete: System Nominal', type: 'success' });
+            }
+        } else {
+            setToast({ message: 'Analysis Failed', type: 'error' });
+        }
+    };
+
     const handleAddVehicle = (e) => {
         e.preventDefault();
         setIsModalOpen(false);
         setToast({ message: 'Vehicle Added Successfully', type: 'success' });
-        // Logic to actually add would go here
     };
 
     const generateReport = () => {
         setToast({ message: 'Generating Comprehensive Report...', type: 'info' });
         setTimeout(() => {
-             setToast({ message: 'Report Sent to Email', type: 'success' });
+            setToast({ message: 'Report Sent to Email', type: 'success' });
         }, 2000);
     };
 
@@ -59,13 +78,13 @@ export default function OwnerDashboard() {
                     <p className="text-gray-400">Real-time Fleet Status & Predictive Insights</p>
                 </div>
                 <div className="flex gap-3">
-                    <button 
+                    <button
                         onClick={() => setIsModalOpen(true)}
                         className="px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold shadow-lg shadow-primary/20 flex items-center gap-2 transition-transform hover:scale-105"
                     >
                         <Plus size={18} /> Add Vehicle
                     </button>
-                    <button 
+                    <button
                         onClick={generateReport}
                         className="px-4 py-2 bg-surface hover:bg-white/10 border border-white/10 text-gray-300 rounded-lg font-semibold flex items-center gap-2 transition-colors"
                     >
@@ -77,15 +96,16 @@ export default function OwnerDashboard() {
             {/* ROW 1: Vehicle Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {vehicles.map((v, i) => (
-                    <motion.div 
+                    <motion.div
                         key={v.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
+                        onClick={() => runAgentAnalysis(v.vin)} // Use VIN or ID as per API
                         className="glass-panel p-6 hover:border-primary/50 transition-colors cursor-pointer group relative overflow-hidden"
                     >
                         <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-primary/20 transition-all" />
-                        
+
                         <div className="flex justify-between items-start mb-4 relative z-10">
                             <div>
                                 <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">{v.make} {v.model}</h3>
@@ -95,24 +115,81 @@ export default function OwnerDashboard() {
                                 <Activity size={20} />
                             </div>
                         </div>
-                        
+
                         <div className="space-y-2 relative z-10">
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-400">Health Score</span>
                                 <span className={`font-bold ${healthColor(v.health_score)}`}>{v.health_score}%</span>
                             </div>
                             <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
-                                <motion.div 
+                                <motion.div
                                     initial={{ width: 0 }}
                                     animate={{ width: `${v.health_score}%` }}
                                     transition={{ duration: 1, delay: 0.5 }}
-                                    className={`h-full ${v.health_score > 80 ? 'bg-accent shadow-[0_0_10px_#10b981]' : v.health_score > 50 ? 'bg-warning' : 'bg-danger'}`} 
+                                    className={`h-full ${v.health_score > 80 ? 'bg-accent shadow-[0_0_10px_#10b981]' : v.health_score > 50 ? 'bg-warning' : 'bg-danger'}`}
                                 />
                             </div>
+                        </div>
+
+                        {/* Analysis indicator */}
+                        <div className="mt-4 pt-4 border-t border-white/5 text-xs text-center text-cyan-400 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Zap size={12} /> Click to Run AI Diagnostics
                         </div>
                     </motion.div>
                 ))}
             </div>
+
+            {/* Analysis Result Section */}
+            {analysisResult && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-panel p-6 border-l-4 border-l-neon-blue"
+                >
+                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <Activity className="text-neon-blue" />
+                        AI Diagnostic Report: {analysisResult.vehicle_id}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-black/30 p-4 rounded-lg">
+                            <h4 className="text-gray-400 text-sm mb-2">Risk Assessment</h4>
+                            <div className="text-2xl font-bold text-white">{analysisResult.risk_assessment?.level || 'N/A'}</div>
+                            <ul className="text-sm text-gray-500 mt-2 list-disc list-inside">
+                                {analysisResult.risk_assessment?.factors?.map((f, i) => <li key={i}>{f}</li>)}
+                            </ul>
+                        </div>
+                        <div className="bg-black/30 p-4 rounded-lg">
+                            <h4 className="text-gray-400 text-sm mb-2">Diagnosis</h4>
+                            {analysisResult.diagnosis ? (
+                                <>
+                                    <div className="text-xl font-bold text-red-400">{analysisResult.diagnosis.component}</div>
+                                    <p className="text-sm text-gray-300 mt-1">{analysisResult.diagnosis.recommendation}</p>
+                                    <div className="mt-2 text-xs font-mono text-neon-blue bg-neon-blue/10 inline-block px-2 py-1 rounded">
+                                        Urgency: {analysisResult.diagnosis.urgency}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-green-500 font-bold">Systems Nominal</div>
+                            )}
+                        </div>
+                        <div className="bg-black/30 p-4 rounded-lg">
+                            <h4 className="text-gray-400 text-sm mb-2">Customer Action</h4>
+                            {analysisResult.customer_engagement?.agreed ? (
+                                <div className="text-green-400">
+                                    <CheckCircle size={20} className="inline mr-2" />
+                                    Service Scheduled
+                                    <p className="text-xs text-gray-500 mt-1">Preferred Time: {analysisResult.customer_engagement.preferred_time}</p>
+                                </div>
+                            ) : (
+                                <div className="text-yellow-500">
+                                    Pending Approval
+                                    <p className="text-xs text-gray-500 mt-1">Follow-up needed</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+            )}
 
             {/* ROW 2: New Features Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -122,7 +199,7 @@ export default function OwnerDashboard() {
                 <div className="lg:col-span-1">
                     <SmartScheduler />
                 </div>
-                 <div className="lg:col-span-2">
+                <div className="lg:col-span-2">
                     <DigitalTwin />
                 </div>
             </div>
@@ -134,12 +211,12 @@ export default function OwnerDashboard() {
                 </div>
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                     <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                     </span>
                     Live Telemetry Stream
                 </h3>
-                
+
                 {telemetry ? (
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         {['Speed', 'RPM', 'Temp', 'Vibration'].map((metric, i) => (
@@ -147,13 +224,12 @@ export default function OwnerDashboard() {
                                 <p className="text-gray-500 text-xs uppercase font-bold tracking-wider mb-1">{metric}</p>
                                 <p className="text-3xl font-bold font-mono text-white">
                                     {metric === 'Speed' ? telemetry.speed?.toFixed(0) :
-                                     metric === 'RPM' ? telemetry.engine_rpm?.toFixed(0) :
-                                     metric === 'Temp' ? telemetry.engine_temp?.toFixed(1) : '0.04'}
-                                     <span className="text-xs text-gray-600 ml-1">
-                                         {metric === 'Speed' ? 'km/h' : metric === 'Temp' ? '°C' : metric === 'Vibration' ? 'G' : ''}
-                                     </span>
+                                        metric === 'RPM' ? telemetry.engine_rpm?.toFixed(0) :
+                                            metric === 'Temp' ? telemetry.engine_temp?.toFixed(1) : '0.04'}
+                                    <span className="text-xs text-gray-600 ml-1">
+                                        {metric === 'Speed' ? 'km/h' : metric === 'Temp' ? '°C' : metric === 'Vibration' ? 'G' : ''}
+                                    </span>
                                 </p>
-                                {/* Animated Line Chart Mockup */}
                                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-neon-blue to-transparent opacity-50" />
                             </div>
                         ))}

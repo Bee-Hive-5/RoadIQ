@@ -1,0 +1,8 @@
+vehicle_id,engine_temp,vibration,battery_voltage,failure_risk,component_health,batch_id
+V001,105,1.2,11.2,0.85,brake_system,BATCH_2023_04
+V002,90,0.3,12.4,0.12,none,BATCH_2023_05
+V003,115,0.8,11.8,0.92,engine,BATCH_2023_04
+V004,88,0.2,12.5,0.05,none,BATCH_2023_06
+V005,95,1.5,10.9,0.78,suspension,BATCH_2023_04
+V006,92,0.4,12.2,0.25,none,BATCH_2023_05
+V007,102,0.9,11.6,0.65,transmission,BATCH_2023_04

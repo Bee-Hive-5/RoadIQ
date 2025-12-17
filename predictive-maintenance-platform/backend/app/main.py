@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import vehicles, agents, dashboard
+from app.routers import agents, dashboard # vehicles,
 import asyncio
 
 app = FastAPI(title="Agentic Maintenance Platform API")
@@ -34,7 +34,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # Routes
-app.include_router(vehicles.router, prefix="/api/vehicles", tags=["vehicles"])
+# app.include_router(vehicles.router, prefix="/api/vehicles", tags=["vehicles"])
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 
