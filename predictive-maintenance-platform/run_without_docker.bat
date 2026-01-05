@@ -12,9 +12,9 @@ REM Configured by Agent
 
 echo [1/3] Installing Backend Defaults...
 cd backend
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 echo Starting Backend API...
-start "Backend API" cmd /c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+start "Backend API" cmd /c "python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 cd ..
 
 echo [2/3] Installing Frontend Defaults...

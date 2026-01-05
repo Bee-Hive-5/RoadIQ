@@ -17,37 +17,16 @@ import queue
 class RoadIQVoiceAPI:
     def __init__(self):
         self.message_queue = queue.Queue()
-        self.available = False
-        self.worker_thread = None
-        
-        try:
-            if pyttsx3:
-                # Test initialization to set availability
-                # Actual engine will live in the worker thread
-                self.available = True
-                self._start_worker()
-            else:
-                self.available = False
-        except:
-            self.available = False
+        self.available = True
+        self._start_worker()
     
     def _start_worker(self):
         """Start the dedicated voice worker thread"""
         def worker():
-            # Initialize COM for this thread (Required for Windows SAPI5 in threads)
-            try:
-                import pythoncom
-                pythoncom.CoInitialize()
-            except ImportError:
-                print("Warning: pythoncom not found, voice might fail on Windows")
+            import os
+            import time
+            from gtts import gTTS
             
-            # Initialize engine inside the thread
-            try:
-                engine = pyttsx3.init()
-            except Exception as e:
-                print(f"Voice Worker Failed to Init: {e}")
-                return
-
             while True:
                 try:
                     # Block until a message is available
@@ -56,49 +35,43 @@ class RoadIQVoiceAPI:
                         break
                     
                     text, emotion = task
+                    print(f"🤖 RoadIQ Output (Google Voice): {text}")
                     
-                    # Apply properties based on emotion
-                    if emotion == "urgent":
-                        engine.setProperty('rate', 200)
-                        engine.setProperty('volume', 1.0)
-                    elif emotion == "calm":
-                        engine.setProperty('rate', 150)
-                        engine.setProperty('volume', 0.7)
-                    else:
-                        engine.setProperty('rate', 175)
-                        engine.setProperty('volume', 0.9)
+                    try:
+                        # Generate MP3 with Google Text-to-Speech
+                        tts = gTTS(text=text, lang='en', tld='co.uk') # UK accent for professional feel
+                        filename = "temp_voice.mp3"
                         
-                    print(f"🤖 RoadIQ Output ({emotion}): {text}")
-                    engine.say(text)
-                    engine.runAndWait()
+                        # Remove if exists (permission issues can happen, retry loop helps)
+                        if os.path.exists(filename):
+                            try:
+                                os.remove(filename)
+                            except:
+                                filename = f"temp_voice_{int(time.time())}.mp3"
+                                
+                        tts.save(filename)
+                        
+                        # Play audio (Windows specific command)
+                        # strictly for local demo invocation
+                        os.system(f'start /min {filename}') 
+                        
+                        # Wait a bit for the player to start before moving on
+                        time.sleep(2)
+                        
+                    except Exception as e:
+                        print(f"gTTS Error: {e}")
                     
                     self.message_queue.task_done()
                 except Exception as e:
                     print(f"Voice Worker Error: {e}")
-                    # Re-init engine if it crashed?
-                    try:
-                        engine = pyttsx3.init()
-                    except:
-                        pass
-            
-            try:
-                import pythoncom
-                pythoncom.CoUninitialize()
-            except:
-                pass
 
         self.worker_thread = threading.Thread(target=worker, daemon=True)
         self.worker_thread.start()
 
     def setup_voice(self):
-        # Configuration is now dynamic per message in the worker
         pass
     
     def speak_async(self, text, emotion="professional"):
-        if not self.available:
-            return
-        
-        # Determine emotion if not provided, for now assume passed correctly
         self.message_queue.put((text, emotion))
 
 class MasterAgent:
@@ -134,6 +107,11 @@ class MasterAgent:
             # 4. Generate Customer Engagement
             self.ueba_agent.monitor_agent_action('CustomerAgent', 'engage_customer', f'vehicle_{vehicle_id}')
             customer_engagement = self.customer_agent.engage_customer(vehicle_id, diagnosis)
+            
+            # TRIGGER VOICE ASSISTANT (Google Voice)
+            if diagnosis:
+                voice_text = f"Attention. Failure detected in {diagnosis.get('component')}. Urgency level: {diagnosis.get('urgency')}."
+                self.voice_assistant.speak_async(voice_text, emotion='urgent')
             
         return {
             'vehicle_id': vehicle_id,

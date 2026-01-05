@@ -16,3 +16,6 @@ itsdangerous
 watchfiles
 email-validator
 pyttsx3
+google-generativeai
+gTTS
+youtube-search-python

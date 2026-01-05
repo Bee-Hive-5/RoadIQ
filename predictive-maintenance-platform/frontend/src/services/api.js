@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export const agentsApi = {
   // Vehicle Health & Diagnosis
@@ -63,18 +63,18 @@ export const agentsApi = {
       return null;
     }
   },
-  
+
   voiceQuestion: async (questionType) => {
-      try {
-        const response = await fetch(`${API_URL}/agents/voice/speak`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question_type: questionType })
-        });
-        return await response.json();
-      } catch (error) {
-        console.error('Voice Question Error:', error);
-        return null;
-      }
+    try {
+      const response = await fetch(`${API_URL}/agents/voice/speak`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question_type: questionType })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Voice Question Error:', error);
+      return null;
     }
+  }
 };

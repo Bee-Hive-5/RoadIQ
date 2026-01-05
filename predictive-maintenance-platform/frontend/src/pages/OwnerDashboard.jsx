@@ -167,6 +167,25 @@ export default function OwnerDashboard() {
                                     <div className="mt-2 text-xs font-mono text-neon-blue bg-neon-blue/10 inline-block px-2 py-1 rounded">
                                         Urgency: {analysisResult.diagnosis.urgency}
                                     </div>
+
+                                    {/* Video Tutorial Link */}
+                                    {analysisResult.diagnosis.video_tutorial && (
+                                        <div className="mt-4 pt-4 border-t border-white/10">
+                                            <a
+                                                href={analysisResult.diagnosis.video_tutorial}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
+                                            >
+                                                <div className="bg-red-600 text-white p-1 rounded">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                                                    </svg>
+                                                </div>
+                                                Watch Repair Tutorial
+                                            </a>
+                                        </div>
+                                    )}
                                 </>
                             ) : (
                                 <div className="text-green-500 font-bold">Systems Nominal</div>
